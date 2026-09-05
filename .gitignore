@@ -9,3 +9,4 @@ dist
 .wrangler
 package-lock.json
 bun.lockb
+src/generated
