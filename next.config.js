@@ -6,6 +6,10 @@ const nextConfig = {
     // or a CDN with its own resizing if you need on-the-fly optimization.
     unoptimized: true,
   },
+  // Prisma's client must NOT be re-bundled by Next.js — bundling breaks the
+  // internal logic that skips native engine detection when a driver adapter
+  // is supplied, which is what was causing the Workers runtime crash.
+  serverExternalPackages: ["@prisma/client", ".prisma/client"],
 };
 
 module.exports = nextConfig;
