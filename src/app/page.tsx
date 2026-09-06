@@ -29,12 +29,12 @@ export default async function HomePage() {
   return (
     <main className="bg-cream">
       {/* HERO */}
-      <section className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-sage-50 px-4 text-center sm:aspect-[16/9] md:min-h-[80vh] md:aspect-auto">
+      <section className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-charcoal px-4 text-center sm:aspect-[16/9] md:min-h-[80vh] md:aspect-auto">
         {heroImageMobile && (
-          <Image src={heroImageMobile} alt="" fill priority className="object-cover sm:hidden" />
+          <Image src={heroImageMobile} alt="" fill priority className="object-contain sm:hidden" />
         )}
         {heroImage && (
-          <Image src={heroImage} alt="" fill priority className="hidden object-cover sm:block" />
+          <Image src={heroImage} alt="" fill priority className="hidden object-contain sm:block" />
         )}
         {heroImage && <div className="absolute inset-0 bg-black/35" />}
         <div className={`relative z-10 max-w-2xl animate-fade-up ${heroImage ? "text-white" : ""}`}>
@@ -49,13 +49,19 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* TRUST BAR */}
-      <section className="border-y border-sage-100 bg-white py-6">
-        <div className="mx-auto grid max-w-5xl grid-cols-2 gap-6 px-4 text-center text-sm text-charcoal-light md:grid-cols-4">
-          <span>Free Shipping</span>
-          <span>Easy Returns</span>
-          <span>Secure Checkout</span>
-          <span>Pet-Lover Approved</span>
+      {/* TRUST BAR — scrolling ticker */}
+      <section className="overflow-hidden border-y border-sage-100 bg-white py-4">
+        <div className="flex w-max animate-marquee whitespace-nowrap">
+          {Array.from({ length: 2 }).map((_, dup) => (
+            <div key={dup} className="flex shrink-0 items-center">
+              {["Free Shipping", "Easy Returns", "Secure Checkout", "Pet-Lover Approved"].map((t) => (
+                <span key={t} className="mx-6 flex items-center gap-2 text-sm font-medium text-charcoal-light">
+                  <span className="h-1.5 w-1.5 rounded-full bg-sage-500" />
+                  {t}
+                </span>
+              ))}
+            </div>
+          ))}
         </div>
       </section>
 
