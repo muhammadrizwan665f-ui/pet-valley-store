@@ -28,7 +28,7 @@ export default async function HomePage() {
   return (
     <main className="bg-cream">
       {/* HERO */}
-      <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden bg-sage-50 px-4 text-center">
+      <section className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-sage-50 px-4 text-center md:aspect-auto md:min-h-[80vh]">
         {heroImage && (
           <Image src={heroImage} alt="" fill priority className="object-cover" />
         )}

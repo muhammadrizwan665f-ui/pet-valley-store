@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { Heart, ShoppingBag } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "./Button";
 import { useCartStore } from "@/lib/cartStore";
 import { useToast } from "./Toast";
@@ -29,7 +30,9 @@ export function ProductCard({ product }: { product: ProductCardData }) {
       ? Math.round(100 - (product.price / product.compareAtPrice) * 100)
       : null;
 
-  const toggleWishlist = async () => {
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const next = !wished;
     setWished(next);
     await fetch("/api/wishlist", {
@@ -39,7 +42,9 @@ export function ProductCard({ product }: { product: ProductCardData }) {
     });
   };
 
-  const addToCart = async () => {
+  const addToCart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     const res = await fetch("/api/cart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -63,41 +68,43 @@ export function ProductCard({ product }: { product: ProductCardData }) {
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="group relative rounded-2xl bg-white p-3"
     >
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-sage-50">
-        <motion.div whileHover={{ scale: 1.06 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="h-full w-full">
-          <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />
-        </motion.div>
+      <Link href={`/product/${product.slug}`} className="block">
+        <div className="relative aspect-square overflow-hidden rounded-xl bg-sage-50">
+          <motion.div whileHover={{ scale: 1.06 }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }} className="h-full w-full">
+            <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />
+          </motion.div>
 
-        {discount && (
-          <span className="absolute left-2 top-2 rounded-full bg-sage-500 px-2 py-1 text-xs font-medium text-white">
-            -{discount}%
-          </span>
-        )}
-
-        <motion.button
-          aria-label="Add to wishlist"
-          onClick={toggleWishlist}
-          whileTap={{ scale: 0.8 }}
-          className="absolute right-2 top-2 rounded-full bg-white/90 p-2 shadow-sm"
-        >
-          <motion.span animate={wished ? { scale: [1, 1.3, 1] } : { scale: 1 }} transition={{ duration: 0.3 }}>
-            <Heart size={16} className={wished ? "fill-sage-500 text-sage-500" : "text-charcoal-light"} />
-          </motion.span>
-        </motion.button>
-      </div>
-
-      <div className="mt-3 space-y-1">
-        <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-charcoal">{product.name}</p>
-        <p className="text-xs text-charcoal-light">
-          ★ {product.rating.toFixed(1)} ({product.reviewCount})
-        </p>
-        <div className="flex items-baseline gap-2">
-          <span className="text-sm font-semibold text-charcoal">${product.price.toFixed(2)}</span>
-          {product.compareAtPrice && (
-            <span className="text-xs text-charcoal-light line-through">${product.compareAtPrice.toFixed(2)}</span>
+          {discount && (
+            <span className="absolute left-2 top-2 rounded-full bg-sage-500 px-2 py-1 text-xs font-medium text-white">
+              -{discount}%
+            </span>
           )}
         </div>
-      </div>
+
+        <div className="mt-3 space-y-1">
+          <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-charcoal">{product.name}</p>
+          <p className="text-xs text-charcoal-light">
+            ★ {product.rating.toFixed(1)} ({product.reviewCount})
+          </p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold text-charcoal">${product.price.toFixed(2)}</span>
+            {product.compareAtPrice && (
+              <span className="text-xs text-charcoal-light line-through">${product.compareAtPrice.toFixed(2)}</span>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      <motion.button
+        aria-label="Add to wishlist"
+        onClick={toggleWishlist}
+        whileTap={{ scale: 0.8 }}
+        className="absolute right-5 top-5 rounded-full bg-white/90 p-2 shadow-sm"
+      >
+        <motion.span animate={wished ? { scale: [1, 1.3, 1] } : { scale: 1 }} transition={{ duration: 0.3 }}>
+          <Heart size={16} className={wished ? "fill-sage-500 text-sage-500" : "text-charcoal-light"} />
+        </motion.span>
+      </motion.button>
 
       <Button
         variant="secondary"
