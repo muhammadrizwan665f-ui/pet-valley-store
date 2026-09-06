@@ -63,7 +63,7 @@ export default async function HomePage() {
       {categories.length > 0 && (
         <section className="mx-auto max-w-6xl px-4 py-16">
           <h2 className="text-center font-display text-3xl text-charcoal">Shop by Category</h2>
-          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-5">
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
             {categories.map((c: any) => (
               <Link
                 key={c.id}
