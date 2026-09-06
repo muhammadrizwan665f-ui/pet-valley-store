@@ -87,7 +87,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
       </div>
 
       <div className="mt-3 space-y-1">
-        <p className="text-sm font-medium text-charcoal">{product.name}</p>
+        <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-charcoal">{product.name}</p>
         <p className="text-xs text-charcoal-light">
           ★ {product.rating.toFixed(1)} ({product.reviewCount})
         </p>
