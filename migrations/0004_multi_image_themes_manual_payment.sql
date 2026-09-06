@@ -1,0 +1,10 @@
+ALTER TABLE "ProductVariant" ADD COLUMN "images" TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE "StoreSettings" ADD COLUMN "theme" TEXT NOT NULL DEFAULT 'sage';
+ALTER TABLE "StoreSettings" ADD COLUMN "manualPaymentEnabled" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "StoreSettings" ADD COLUMN "bankName" TEXT;
+ALTER TABLE "StoreSettings" ADD COLUMN "bankAccountTitle" TEXT;
+ALTER TABLE "StoreSettings" ADD COLUMN "bankAccountNumber" TEXT;
+ALTER TABLE "StoreSettings" ADD COLUMN "bankIban" TEXT;
+ALTER TABLE "StoreSettings" ADD COLUMN "manualPaymentInstructions" TEXT;
+ALTER TABLE "Order" ADD COLUMN "paymentProofUrl" TEXT;
+ALTER TABLE "Review" ADD COLUMN "authorName" TEXT;

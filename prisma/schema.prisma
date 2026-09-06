@@ -130,7 +130,8 @@ model ProductVariant {
   product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   name        String  // e.g. "Color"
   value       String  // e.g. "Red"
-  imageUrl    String? // color/variant-specific image
+  imageUrl    String? // primary swatch/thumbnail image
+  images      String  @default("[]") // JSON-encoded string[] — full gallery for this colour
   priceDelta  Float   @default(0)
   sku         String? @unique
   stock       Int     @default(0)
@@ -200,6 +201,7 @@ model Order {
   total             Float
   couponCode        String?
   internalNotes     String?
+  paymentProofUrl   String?
   items             OrderItem[]
   payment           Payment?
   shipment          Shipment?
@@ -289,16 +291,17 @@ model CouponUsage {
 // status: "PENDING" | "APPROVED" | "REJECTED"
 
 model Review {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  rating    Int
-  title     String?
-  body      String?
-  status    String   @default("PENDING")
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  authorName String? // overrides the displayed reviewer name (used for admin-added reviews)
+  rating     Int
+  title      String?
+  body       String?
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
 
   @@index([productId])
   @@index([status])
@@ -340,5 +343,12 @@ model StoreSettings {
   heroSubtitle       String?
   heroCtaText        String?
   heroCtaLink        String?
+  theme              String   @default("sage")
+  manualPaymentEnabled Boolean @default(false)
+  bankName           String?
+  bankAccountTitle   String?
+  bankAccountNumber  String?
+  bankIban           String?
+  manualPaymentInstructions String?
   updatedAt          DateTime @updatedAt
 }

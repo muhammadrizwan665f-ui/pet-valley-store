@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
+import { decodeStringArray } from "@/lib/json";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +18,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     include: { images: { orderBy: { sortOrder: "asc" } }, variants: { orderBy: { sortOrder: "asc" } } },
   });
   if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(product);
+
+  return NextResponse.json({
+    ...product,
+    variants: product.variants.map((v: any) => ({ ...v, images: decodeStringArray(v.images) })),
+  });
 }

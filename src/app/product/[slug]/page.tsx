@@ -65,7 +65,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           productId={product.id}
           images={product.images.map((i: any) => ({ url: i.url, type: i.type || "image" }))}
           variants={product.variants.map((v: any) => ({
-            id: v.id, name: v.name, value: v.value, imageUrl: v.imageUrl, priceDelta: Number(v.priceDelta), stock: v.stock,
+            id: v.id, name: v.name, value: v.value, imageUrl: v.imageUrl, images: decodeStringArray(v.images), priceDelta: Number(v.priceDelta), stock: v.stock,
           }))}
           basePrice={Number(product.price)}
           compareAtPrice={product.compareAtPrice ? Number(product.compareAtPrice) : null}
@@ -87,7 +87,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <div key={r.id} className="rounded-xl bg-white p-4 shadow-sm">
               <p className="text-sm font-medium">{"★".repeat(r.rating)}</p>
               <p className="text-sm text-charcoal-light">{r.title} {r.body}</p>
-              <p className="mt-1 text-xs text-charcoal-light">— {r.user.firstName}</p>
+              <p className="mt-1 text-xs text-charcoal-light">— {r.authorName || r.user.firstName}</p>
             </div>
           ))}
         </div>

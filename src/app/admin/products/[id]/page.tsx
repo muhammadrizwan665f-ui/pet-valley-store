@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { MediaUploader } from "@/components/admin/MediaUploader";
 
 type ImageRow = { id?: string; url: string; type: "image" | "video"; altText?: string };
-type VariantRow = { id?: string; name: string; value: string; imageUrl?: string; priceDelta?: number; sku?: string; stock?: number };
+type VariantRow = { id?: string; name: string; value: string; images: string[]; priceDelta?: number; sku?: string; stock?: number };
 
 export default function ProductFormPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function ProductFormPage() {
         });
         setImages((p.images || []).map((i: any) => ({ id: i.id, url: i.url, type: i.type || "image", altText: i.altText || "" })));
         setVariants((p.variants || []).map((v: any) => ({
-          id: v.id, name: v.name, value: v.value, imageUrl: v.imageUrl || "",
+          id: v.id, name: v.name, value: v.value, images: v.images?.length ? v.images : (v.imageUrl ? [v.imageUrl] : []),
           priceDelta: v.priceDelta, sku: v.sku || "", stock: v.stock,
         })));
       });
@@ -134,7 +134,7 @@ export default function ProductFormPage() {
           <h2 className="text-sm font-semibold">Colours / Options</h2>
           <button
             type="button"
-            onClick={() => setVariants([...variants, { name: "Color", value: "", imageUrl: "", priceDelta: 0, sku: "", stock: 0 }])}
+            onClick={() => setVariants([...variants, { name: "Color", value: "", images: [], priceDelta: 0, sku: "", stock: 0 }])}
             className="rounded-lg bg-sage-100 px-3 py-1.5 text-xs font-medium text-sage-700"
           >
             + Add Colour
@@ -147,12 +147,6 @@ export default function ProductFormPage() {
           {variants.map((v, i) => (
             <div key={i} className="space-y-2 rounded-xl bg-[#f7f8f9] p-3">
               <div className="flex items-start gap-3">
-                <MediaUploader
-                  accept="image/*"
-                  value={v.imageUrl ? { url: v.imageUrl, type: "image" } : undefined}
-                  onChange={(media) => setVariants(variants.map((x, j) => (j === i ? { ...x, imageUrl: media.url } : x)))}
-                  className="shrink-0"
-                />
                 <div className="flex-1 space-y-2">
                   <div className="flex gap-2">
                     <input
@@ -173,7 +167,32 @@ export default function ProductFormPage() {
                   Remove
                 </button>
               </div>
-              <div className="flex gap-2 pl-[124px]">
+
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-[#6b7280]">Photos for this colour</p>
+                <div className="flex flex-wrap gap-2">
+                  {v.images.map((url, k) => (
+                    <div key={k} className="relative h-14 w-14">
+                      <img src={url} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setVariants(variants.map((x, j) => (j === i ? { ...x, images: x.images.filter((_, m) => m !== k) } : x)))
+                        }
+                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <MediaUploader
+                    accept="image/*"
+                    onChange={(media) => setVariants(variants.map((x, j) => (j === i ? { ...x, images: [...x.images, media.url] } : x)))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
                 <input
                   placeholder="Price adjustment (+/-)"
                   type="number"

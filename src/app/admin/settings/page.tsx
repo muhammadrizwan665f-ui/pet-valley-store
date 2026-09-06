@@ -3,15 +3,25 @@
 import { useEffect, useState } from "react";
 import { MediaUploader } from "@/components/admin/MediaUploader";
 
+const THEMES = [
+  { id: "sage", label: "Sage (default)", swatch: "#6f8a5c" },
+  { id: "ocean", label: "Ocean", swatch: "#3d6f76" },
+  { id: "blush", label: "Blush", swatch: "#a25353" },
+  { id: "amber", label: "Amber", swatch: "#a06b34" },
+  { id: "slate", label: "Slate", swatch: "#5c6d7e" },
+];
+
 export default function AdminSettingsPage() {
   const [form, setForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { fetch("/api/admin/settings").then((r) => r.json()).then(setForm); }, []);
 
-  const save = async () => {
+  const save = async (overrides?: any) => {
     setSaving(true);
-    await fetch("/api/admin/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const payload = overrides ? { ...form, ...overrides } : form;
+    if (overrides) setForm(payload);
+    await fetch("/api/admin/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     setSaving(false);
   };
 
@@ -39,14 +49,35 @@ export default function AdminSettingsPage() {
         <input type="checkbox" checked={form.storeIsLive} onChange={(e) => setForm({ ...form, storeIsLive: e.target.checked })} /> Store is live
       </label>
 
+      {/* Theme picker */}
+      <div className="rounded-2xl border border-[#e4e6e8] p-4 space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold">Store Theme</h2>
+          <p className="mt-1 text-xs text-[#6b7280]">Pick a colour theme for the whole site. Changes apply immediately after saving.</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {THEMES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => void save({ theme: t.id })}
+              className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-2 text-xs ${
+                form.theme === t.id ? "border-sage-500" : "border-transparent"
+              }`}
+            >
+              <span className="h-10 w-10 rounded-full" style={{ backgroundColor: t.swatch }} />
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Homepage banner */}
       <div className="rounded-2xl border border-[#e4e6e8] p-4 space-y-4">
         <div>
           <h2 className="text-sm font-semibold">Homepage Banner</h2>
           <p className="mt-1 text-xs text-[#6b7280]">Controls the large image + headline shown at the top of your homepage.</p>
         </div>
-        {form.heroImageUrl && (
-          <img src={form.heroImageUrl} alt="" className="h-32 w-full rounded-xl object-cover" onError={(e) => ((e.target as HTMLImageElement).style.opacity = "0.3")} />
-        )}
         <div>
           <label className="mb-1 block text-sm font-medium">Banner Image</label>
           <MediaUploader
@@ -63,7 +94,40 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      <button onClick={save} disabled={saving} className="rounded-lg bg-sage-500 px-4 py-2 text-sm text-white">
+      {/* Manual payment */}
+      <div className="rounded-2xl border border-[#e4e6e8] p-4 space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold">Manual Bank Transfer Payment</h2>
+          <p className="mt-1 text-xs text-[#6b7280]">
+            Let customers pay by bank transfer and upload a payment screenshot, alongside PayFast.
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={!!form.manualPaymentEnabled}
+            onChange={(e) => setForm({ ...form, manualPaymentEnabled: e.target.checked })}
+          />
+          Enable manual bank transfer at checkout
+        </label>
+        {field("Bank Name", "bankName")}
+        {field("Account Title", "bankAccountTitle")}
+        <div className="flex gap-2">
+          <div className="w-1/2">{field("Account Number", "bankAccountNumber")}</div>
+          <div className="w-1/2">{field("IBAN (optional)", "bankIban")}</div>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Instructions shown to customer</label>
+          <textarea
+            value={form.manualPaymentInstructions ?? ""}
+            onChange={(e) => setForm({ ...form, manualPaymentInstructions: e.target.value })}
+            className="w-full rounded-lg border border-[#e4e6e8] px-3 py-2 text-sm"
+            rows={3}
+          />
+        </div>
+      </div>
+
+      <button onClick={() => void save()} disabled={saving} className="rounded-lg bg-sage-500 px-4 py-2 text-sm text-white">
         {saving ? "Saving…" : "Save Settings"}
       </button>
     </div>

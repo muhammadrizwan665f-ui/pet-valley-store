@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   })();
 
   return (
-    <html lang="en">
+    <html lang="en" data-theme={settings?.theme || "sage"}>
       <body className="bg-cream text-charcoal antialiased">
         <Providers>
           {settings?.announcementActive && settings.announcementText && (

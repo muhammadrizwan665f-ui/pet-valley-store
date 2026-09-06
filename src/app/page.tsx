@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const prisma = await getPrisma();
-  const [bestSellers, settings] = await Promise.all([
+  const [bestSellers, settings, categories] = await Promise.all([
     prisma.product.findMany({
       where: { isPublished: true },
       take: 8,
@@ -16,6 +16,7 @@ export default async function HomePage() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.storeSettings.findUnique({ where: { id: "singleton" } }).catch(() => null),
+    prisma.category.findMany({ where: { isActive: true, imageUrl: { not: null } }, orderBy: { sortOrder: "asc" }, take: 6 }).catch(() => []),
   ]);
 
   const heroImage = settings?.heroImageUrl;
@@ -71,6 +72,23 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* SHOP BY CATEGORY (admin-managed, with real photos) */}
+      {categories.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-center font-display text-3xl text-charcoal">Shop by Category</h2>
+          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3">
+            {categories.map((c: any) => (
+              <Link key={c.id} href={`/shop?category=${c.slug}`} className="group relative aspect-square overflow-hidden rounded-2xl">
+                <Image src={c.imageUrl} alt={c.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/40 to-transparent p-4">
+                  <span className="font-display text-lg text-white">{c.name}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* BEST SELLERS */}
       <section className="mx-auto max-w-6xl px-4 py-16">

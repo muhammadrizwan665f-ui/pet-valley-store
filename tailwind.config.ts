@@ -1,29 +1,35 @@
 import type { Config } from "tailwindcss";
 
+function shade(name: string) {
+  return `rgb(var(--${name}) / <alpha-value>)`;
+}
+
 export default {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        // Brand palette — do not introduce colors outside this set.
+        // Brand accent palette — driven by CSS variables (see globals.css)
+        // so the whole site can switch themes at runtime from the admin
+        // panel without a rebuild.
         sage: {
-          50: "#f4f6f2",
-          100: "#e6ebe1",
-          200: "#cdd8c3",
-          300: "#adbf9d",
-          400: "#8ba377",
-          500: "#6f8a5c", // primary
-          600: "#587047",
-          700: "#465939",
-          800: "#3a4830",
-          900: "#313c29",
+          50: shade("sage-50"),
+          100: shade("sage-100"),
+          200: shade("sage-200"),
+          300: shade("sage-300"),
+          400: shade("sage-400"),
+          500: shade("sage-500"),
+          600: shade("sage-600"),
+          700: shade("sage-700"),
+          800: shade("sage-800"),
+          900: shade("sage-900"),
         },
         cream: {
-          DEFAULT: "#faf8f3", // very light cream / off-white background
+          DEFAULT: "#faf8f3",
           100: "#fdfcfa",
         },
         charcoal: {
-          DEFAULT: "#2b2b28", // primary text
+          DEFAULT: "#2b2b28",
           light: "#54544f",
         },
       },

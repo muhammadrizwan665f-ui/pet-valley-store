@@ -8,7 +8,7 @@ import { useCartStore } from "@/lib/cartStore";
 import { useToast } from "@/components/ui/Toast";
 
 type MediaItem = { url: string; type: "image" | "video" };
-type Variant = { id: string; name: string; value: string; imageUrl?: string | null; priceDelta?: number; stock?: number };
+type Variant = { id: string; name: string; value: string; imageUrl?: string | null; images?: string[]; priceDelta?: number; stock?: number };
 
 export function ProductGallery({
   productId,
@@ -43,7 +43,10 @@ export function ProductGallery({
   const { show } = useToast();
 
   const selectedVariant = variants.find((v) => v.id === variantId);
-  const variantMedia: MediaItem | null = selectedVariant?.imageUrl ? { url: selectedVariant.imageUrl, type: "image" } : null;
+  const variantImages: MediaItem[] = (selectedVariant?.images?.length ? selectedVariant.images : selectedVariant?.imageUrl ? [selectedVariant.imageUrl] : []).map(
+    (url) => ({ url, type: "image" as const }),
+  );
+  const variantMedia: MediaItem | null = variantImages[0] || null;
   const [manualActive, setManualActive] = useState<MediaItem | null>(null);
   const activeMedia: MediaItem =
     manualActive || variantMedia || images[0] || { url: "/images/placeholder-product.jpg", type: "image" };
@@ -51,10 +54,11 @@ export function ProductGallery({
   const outOfStockForVariant = selectedVariant ? (selectedVariant.stock ?? 1) <= 0 : !inStock;
 
   const gallery = useMemo(() => {
-    // If the selected variant has its own image, show that first, then the
-    // rest of the product's normal photo/video set as thumbnails.
-    return [activeMedia, ...images.filter((i) => i.url !== activeMedia.url)];
-  }, [activeMedia, images]);
+    // When a colour with its own photos is selected, show ALL of that
+    // colour's images first, then fall back to the product's general set.
+    const base = variantImages.length ? variantImages : images;
+    return [activeMedia, ...base.filter((i) => i.url !== activeMedia.url)];
+  }, [activeMedia, images, variantImages]);
 
   const addToCart = async () => {
     const res = await fetch("/api/cart", {

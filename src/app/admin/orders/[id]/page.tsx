@@ -35,6 +35,21 @@ export default function AdminOrderDetailPage() {
     setSaving(false);
   };
 
+  const updatePaymentStatus = async (paymentStatus: string) => {
+    setSaving(true);
+    const res = await fetch(`/api/admin/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        paymentStatus,
+        ...(paymentStatus === "PAID" ? { status: "PAID" } : {}),
+        note: paymentStatus === "PAID" ? "Manual payment proof verified by admin" : "Manual payment proof rejected by admin",
+      }),
+    });
+    setOrder(await res.json());
+    setSaving(false);
+  };
+
   const saveTracking = async () => {
     setSaving(true);
     const res = await fetch(`/api/admin/orders/${id}`, {
@@ -51,6 +66,24 @@ export default function AdminOrderDetailPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-xl font-semibold">Order {order.orderNumber}</h1>
+
+      {order.paymentProofUrl && (
+        <div className="rounded-xl bg-white p-4 shadow-sm">
+          <p className="mb-2 text-sm font-medium">Payment Proof (Manual Bank Transfer)</p>
+          <img src={order.paymentProofUrl} alt="Payment proof" className="max-h-96 rounded-lg border border-[#e4e6e8]" />
+          <p className="mt-2 text-xs text-[#6b7280]">Current payment status: <span className="font-medium">{order.paymentStatus}</span></p>
+          {order.paymentStatus !== "PAID" && (
+            <div className="mt-3 flex gap-2">
+              <button onClick={() => updatePaymentStatus("PAID")} disabled={saving} className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm text-white">
+                Approve & Mark Paid
+              </button>
+              <button onClick={() => updatePaymentStatus("FAILED")} disabled={saving} className="rounded-lg bg-red-600 px-4 py-1.5 text-sm text-white">
+                Reject Proof
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-xl bg-white p-4 shadow-sm">
         <p className="mb-2 text-sm font-medium">Status</p>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
-import { encodeStringArray } from "@/lib/json";
+import { encodeStringArray, decodeStringArray } from "@/lib/json";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
         create: (body.variants || []).map((v: any, i: number) => ({
           name: v.name || "Color",
           value: v.value,
-          imageUrl: v.imageUrl || null,
+          imageUrl: (v.images && v.images[0]) || v.imageUrl || null,
+          images: encodeStringArray(v.images || (v.imageUrl ? [v.imageUrl] : [])),
           priceDelta: v.priceDelta ?? 0,
           sku: v.sku || null,
           stock: v.stock ?? 0,
@@ -98,7 +99,8 @@ export async function PATCH(req: NextRequest) {
       const data = {
         name: v.name || "Color",
         value: v.value,
-        imageUrl: v.imageUrl || null,
+        imageUrl: (v.images && v.images[0]) || v.imageUrl || null,
+        images: encodeStringArray(v.images || (v.imageUrl ? [v.imageUrl] : [])),
         priceDelta: v.priceDelta ?? 0,
         sku: v.sku || null,
         stock: v.stock ?? 0,
@@ -116,7 +118,9 @@ export async function PATCH(req: NextRequest) {
     where: { id },
     include: { images: { orderBy: { sortOrder: "asc" } }, variants: { orderBy: { sortOrder: "asc" } } },
   });
-  return NextResponse.json(full);
+  return NextResponse.json(
+    full ? { ...full, variants: full.variants.map((v: any) => ({ ...v, images: decodeStringArray(v.images) })) } : full,
+  );
 }
 
 export async function DELETE(req: NextRequest) {

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import PayFastCheckoutRedirect from "@/components/checkout/PayFastCheckoutRedirect";
+import { MediaUploader } from "@/components/admin/MediaUploader";
 import { Button } from "@/components/ui/Button";
 
 type Summary = {
@@ -17,19 +19,31 @@ type Summary = {
   currency: string;
 };
 
+type StoreSettings = {
+  manualPaymentEnabled: boolean;
+  bankName?: string;
+  bankAccountTitle?: string;
+  bankAccountNumber?: string;
+  bankIban?: string;
+  manualPaymentInstructions?: string;
+};
+
 export default function CheckoutPage() {
-  const [step, setStep] = useState<"review" | "address" | "pay">("review");
+  const router = useRouter();
+  const [step, setStep] = useState<"review" | "address" | "payment-method" | "manual-pay" | "pay">("review");
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [addressId, setAddressId] = useState<string | null>(null);
   const [form, setForm] = useState({ fullName: "", line1: "", city: "", postalCode: "", country: "", phone: "" });
   const [placing, setPlacing] = useState(false);
+  const [proof, setProof] = useState<{ url: string; type: "image" | "video" } | null>(null);
+  const [manualError, setManualError] = useState<string | null>(null);
 
   useEffect(() => {
     const coupon = typeof window !== "undefined" ? sessionStorage.getItem("pv_coupon") : null;
     const qs = coupon ? `?coupon=${encodeURIComponent(coupon)}` : "";
-    fetch(`/api/checkout/summary${qs}`)
-      .then((r) => r.json())
-      .then(setSummary);
+    fetch(`/api/checkout/summary${qs}`).then((r) => r.json()).then(setSummary);
+    fetch("/api/admin/settings").then((r) => (r.ok ? r.json() : null)).then(setSettings).catch(() => setSettings(null));
   }, []);
 
   const saveAddressAndProceed = async () => {
@@ -41,7 +55,32 @@ export default function CheckoutPage() {
     });
     const address = await res.json();
     setAddressId(address.id);
-    setStep("pay");
+    setPlacing(false);
+    setStep(settings?.manualPaymentEnabled ? "payment-method" : "pay");
+  };
+
+  const placeManualOrder = async () => {
+    setPlacing(true);
+    setManualError(null);
+    const coupon = typeof window !== "undefined" ? sessionStorage.getItem("pv_coupon") : null;
+    const res = await fetch("/api/checkout/manual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        shippingAddressId: addressId,
+        billingAddressId: addressId,
+        couponCode: coupon,
+        paymentProofUrl: proof?.url,
+      }),
+    });
+    const data = await res.json();
+    setPlacing(false);
+    if (!res.ok) {
+      setManualError(data.error || "Could not place order");
+      return;
+    }
+    sessionStorage.removeItem("pv_coupon");
+    router.push(`/checkout/success?order=${data.orderId}`);
   };
 
   const money = (n: number) => `$${n.toFixed(2)}`;
@@ -58,13 +97,12 @@ export default function CheckoutPage() {
     <main className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="font-display text-3xl text-charcoal">Checkout</h1>
 
-      {/* Step indicator */}
-      <div className="mt-4 flex items-center gap-2 text-xs font-medium text-charcoal-light">
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-charcoal-light">
         <span className={step === "review" ? "text-sage-600" : ""}>1. Review Order</span>
         <span>→</span>
         <span className={step === "address" ? "text-sage-600" : ""}>2. Shipping Address</span>
         <span>→</span>
-        <span>3. Payment</span>
+        <span className={step === "payment-method" || step === "manual-pay" || step === "pay" ? "text-sage-600" : ""}>3. Payment</span>
       </div>
 
       <div className="mt-6 grid gap-6 md:grid-cols-3">
@@ -110,6 +148,63 @@ export default function CheckoutPage() {
                   {placing ? "Saving…" : "Continue to Payment"}
                 </Button>
               </div>
+            </div>
+          )}
+
+          {step === "payment-method" && (
+            <div className="space-y-3 rounded-2xl bg-white p-6 shadow-sm">
+              <p className="text-sm font-medium">Choose Payment Method</p>
+              <button
+                onClick={() => setStep("pay")}
+                className="flex w-full items-center justify-between rounded-xl border border-sage-200 p-4 text-left hover:border-sage-400"
+              >
+                <span>
+                  <span className="block text-sm font-medium text-charcoal">Pay with PayFast</span>
+                  <span className="block text-xs text-charcoal-light">Card, EFT & more — instant confirmation</span>
+                </span>
+                <span>→</span>
+              </button>
+              <button
+                onClick={() => setStep("manual-pay")}
+                className="flex w-full items-center justify-between rounded-xl border border-sage-200 p-4 text-left hover:border-sage-400"
+              >
+                <span>
+                  <span className="block text-sm font-medium text-charcoal">Manual Bank Transfer</span>
+                  <span className="block text-xs text-charcoal-light">Pay directly to our bank account, upload proof</span>
+                </span>
+                <span>→</span>
+              </button>
+              <Button variant="secondary" onClick={() => setStep("address")}>Back</Button>
+            </div>
+          )}
+
+          {step === "manual-pay" && (
+            <div className="space-y-4 rounded-2xl bg-white p-6 shadow-sm">
+              <p className="text-sm font-medium">Manual Bank Transfer</p>
+              <div className="space-y-1 rounded-xl bg-sage-50 p-4 text-sm">
+                {settings?.bankName && <p><span className="font-medium">Bank:</span> {settings.bankName}</p>}
+                {settings?.bankAccountTitle && <p><span className="font-medium">Account Title:</span> {settings.bankAccountTitle}</p>}
+                {settings?.bankAccountNumber && <p><span className="font-medium">Account Number:</span> {settings.bankAccountNumber}</p>}
+                {settings?.bankIban && <p><span className="font-medium">IBAN:</span> {settings.bankIban}</p>}
+                {settings?.manualPaymentInstructions && <p className="mt-2 text-charcoal-light">{settings.manualPaymentInstructions}</p>}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Upload payment screenshot / receipt</label>
+                <MediaUploader value={proof ?? undefined} onChange={setProof} accept="image/*" />
+              </div>
+
+              {manualError && <p className="text-sm text-red-600">{manualError}</p>}
+
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={() => setStep("payment-method")}>Back</Button>
+                <Button variant="primary" className="flex-1" onClick={placeManualOrder} disabled={placing}>
+                  {placing ? "Placing order…" : "Place Order"}
+                </Button>
+              </div>
+              <p className="text-xs text-charcoal-light">
+                Your order will be marked as pending until our team verifies your payment.
+              </p>
             </div>
           )}
         </div>
