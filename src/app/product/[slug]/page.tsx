@@ -44,7 +44,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     "@type": "Product",
     name: product.name,
     description: product.description,
-    image: product.images.map((i: any) => i.url),
+    image: product.images.filter((i: any) => (i.type || "image") === "image").map((i: any) => i.url),
     offers: { "@type": "Offer", price: product.price.toString(), priceCurrency: "USD", availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" },
     aggregateRating: product.reviews.length ? { "@type": "AggregateRating", ratingValue: avgRating.toFixed(1), reviewCount: product.reviews.length } : undefined,
   };
@@ -63,7 +63,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="grid gap-10 md:grid-cols-2">
         <ProductGallery
           productId={product.id}
-          images={product.images.map((i: any) => i.url)}
+          images={product.images.map((i: any) => ({ url: i.url, type: i.type || "image" }))}
           variants={product.variants.map((v: any) => ({
             id: v.id, name: v.name, value: v.value, imageUrl: v.imageUrl, priceDelta: Number(v.priceDelta), stock: v.stock,
           }))}

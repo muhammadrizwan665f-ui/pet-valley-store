@@ -11,6 +11,11 @@ binding = "DB"
 database_name = "pet-valley-db"
 database_id = "e77f792c-5585-4cdd-828c-c6c2da777ad5"
 
+# R2 bucket for uploaded product/variant images and videos.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "pet-valley-media"
+
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"

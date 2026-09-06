@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/lib/cartStore";
 import { useToast } from "@/components/ui/Toast";
 
+type MediaItem = { url: string; type: "image" | "video" };
 type Variant = { id: string; name: string; value: string; imageUrl?: string | null; priceDelta?: number; stock?: number };
 
 export function ProductGallery({
@@ -23,7 +24,7 @@ export function ProductGallery({
   features,
 }: {
   productId: string;
-  images: string[];
+  images: MediaItem[];
   variants: Variant[];
   basePrice: number;
   compareAtPrice: number | null;
@@ -42,15 +43,18 @@ export function ProductGallery({
   const { show } = useToast();
 
   const selectedVariant = variants.find((v) => v.id === variantId);
-  const activeImage = selectedVariant?.imageUrl || images[0] || "/images/placeholder-product.jpg";
+  const variantMedia: MediaItem | null = selectedVariant?.imageUrl ? { url: selectedVariant.imageUrl, type: "image" } : null;
+  const [manualActive, setManualActive] = useState<MediaItem | null>(null);
+  const activeMedia: MediaItem =
+    manualActive || variantMedia || images[0] || { url: "/images/placeholder-product.jpg", type: "image" };
   const price = basePrice + Number(selectedVariant?.priceDelta || 0);
   const outOfStockForVariant = selectedVariant ? (selectedVariant.stock ?? 1) <= 0 : !inStock;
 
   const gallery = useMemo(() => {
     // If the selected variant has its own image, show that first, then the
-    // rest of the product's normal photo set as thumbnails.
-    return [activeImage, ...images.filter((i) => i !== activeImage)];
-  }, [activeImage, images]);
+    // rest of the product's normal photo/video set as thumbnails.
+    return [activeMedia, ...images.filter((i) => i.url !== activeMedia.url)];
+  }, [activeMedia, images]);
 
   const addToCart = async () => {
     const res = await fetch("/api/cart", {
@@ -74,23 +78,39 @@ export function ProductGallery({
         <div className="relative aspect-square overflow-hidden rounded-2xl bg-sage-50">
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeImage}
+              key={activeMedia.url}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="absolute inset-0"
             >
-              <Image src={activeImage} alt={productName} fill className="object-cover" />
+              {activeMedia.type === "video" ? (
+                <video src={activeMedia.url} controls playsInline className="h-full w-full object-cover" />
+              ) : (
+                <Image src={activeMedia.url} alt={productName} fill className="object-cover" />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
         {gallery.length > 1 && (
           <div className="grid grid-cols-4 gap-2">
-            {gallery.slice(1, 5).map((url, i) => (
-              <div key={url + i} className="relative aspect-square overflow-hidden rounded-lg bg-sage-50">
-                <Image src={url} alt="" fill className="object-cover" />
-              </div>
+            {gallery.slice(1, 5).map((m, i) => (
+              <button
+                key={m.url + i}
+                type="button"
+                onClick={() => setManualActive(m)}
+                className="relative aspect-square overflow-hidden rounded-lg bg-sage-50"
+              >
+                {m.type === "video" ? (
+                  <>
+                    <video src={m.url} className="h-full w-full object-cover" muted />
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">▶</span>
+                  </>
+                ) : (
+                  <Image src={m.url} alt="" fill className="object-cover" />
+                )}
+              </button>
             ))}
           </div>
         )}
@@ -118,10 +138,13 @@ export function ProductGallery({
                   <button
                     key={v.id}
                     type="button"
-                    onClick={() => setVariantId(v.id)}
+                    onClick={() => {
+                      setVariantId(v.id);
+                      setManualActive(null);
+                    }}
                     title={v.value}
                     className={`relative h-14 w-14 overflow-hidden rounded-xl border-2 transition-colors ${
-                      variantId === v.id ? "border-sage-500" : "border-transparent"
+                      variantId === v.id && !manualActive ? "border-sage-500" : "border-transparent"
                     } ${(v.stock ?? 1) <= 0 ? "opacity-40" : ""}`}
                   >
                     <Image src={v.imageUrl!} alt={v.value} fill className="object-cover" />

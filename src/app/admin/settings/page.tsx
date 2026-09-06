@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MediaUploader } from "@/components/admin/MediaUploader";
 
 export default function AdminSettingsPage() {
   const [form, setForm] = useState<any>(null);
@@ -46,7 +47,14 @@ export default function AdminSettingsPage() {
         {form.heroImageUrl && (
           <img src={form.heroImageUrl} alt="" className="h-32 w-full rounded-xl object-cover" onError={(e) => ((e.target as HTMLImageElement).style.opacity = "0.3")} />
         )}
-        {field("Banner Image URL", "heroImageUrl")}
+        <div>
+          <label className="mb-1 block text-sm font-medium">Banner Image</label>
+          <MediaUploader
+            accept="image/*"
+            value={form.heroImageUrl ? { url: form.heroImageUrl, type: "image" } : undefined}
+            onChange={(media) => setForm({ ...form, heroImageUrl: media.url })}
+          />
+        </div>
         {field("Banner Title", "heroTitle")}
         {field("Banner Subtitle", "heroSubtitle")}
         <div className="flex gap-2">

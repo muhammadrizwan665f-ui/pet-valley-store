@@ -2,6 +2,7 @@
 // Regenerate anytime with: npm run cf-typegen
 interface CloudflareEnv {
   DB: D1Database;
+  MEDIA: R2Bucket;
   ASSETS: Fetcher;
   PAYFAST_MODE?: string;
   NEXTAUTH_URL?: string;

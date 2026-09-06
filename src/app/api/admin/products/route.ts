@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       images: {
         create: (body.images || []).map((img: any, i: number) => ({
           url: typeof img === "string" ? img : img.url,
+          type: typeof img === "string" ? "image" : img.type || "image",
           altText: typeof img === "string" ? null : img.altText || null,
           sortOrder: i,
         })),
@@ -75,6 +76,7 @@ export async function PATCH(req: NextRequest) {
         data: images.map((img: any, i: number) => ({
           productId: id,
           url: typeof img === "string" ? img : img.url,
+          type: typeof img === "string" ? "image" : img.type || "image",
           altText: typeof img === "string" ? null : img.altText || null,
           sortOrder: i,
         })),
