@@ -79,11 +79,24 @@ export default function AdminSettingsPage() {
           <p className="mt-1 text-xs text-[#6b7280]">Controls the large image + headline shown at the top of your homepage.</p>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Banner Image</label>
+          <label className="mb-1 block text-sm font-medium">Desktop Banner Image</label>
+          <p className="mb-1.5 text-xs text-[#6b7280]">Wide photo — looks best around 1600×900px (16:9).</p>
           <MediaUploader
             accept="image/*"
             value={form.heroImageUrl ? { url: form.heroImageUrl, type: "image" } : undefined}
             onChange={(media) => setForm({ ...form, heroImageUrl: media.url })}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Mobile Banner Image (optional)</label>
+          <p className="mb-1.5 text-xs text-[#6b7280]">
+            A taller crop of the same photo for phones — around 900×1200px (3:4). If left empty, the desktop image is
+            reused and may look cropped oddly on small screens.
+          </p>
+          <MediaUploader
+            accept="image/*"
+            value={form.heroImageMobileUrl ? { url: form.heroImageMobileUrl, type: "image" } : undefined}
+            onChange={(media) => setForm({ ...form, heroImageMobileUrl: media.url })}
           />
         </div>
         {field("Banner Title", "heroTitle")}
