@@ -29,12 +29,12 @@ export default async function HomePage() {
   return (
     <main className="bg-cream">
       {/* HERO */}
-      <section className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-charcoal px-4 text-center sm:aspect-[16/9] md:min-h-[80vh] md:aspect-auto">
+      <section className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-sage-50 px-4 text-center sm:aspect-[16/9] md:min-h-[80vh] md:aspect-auto">
         {heroImageMobile && (
-          <Image src={heroImageMobile} alt="" fill priority className="object-contain sm:hidden" />
+          <Image src={heroImageMobile} alt="" fill priority className="object-cover sm:hidden" />
         )}
         {heroImage && (
-          <Image src={heroImage} alt="" fill priority className="hidden object-contain sm:block" />
+          <Image src={heroImage} alt="" fill priority className="hidden object-cover sm:block" />
         )}
         {heroImage && <div className="absolute inset-0 bg-black/35" />}
         <div className={`relative z-10 max-w-2xl animate-fade-up ${heroImage ? "text-white" : ""}`}>
