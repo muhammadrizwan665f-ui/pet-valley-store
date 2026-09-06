@@ -8,24 +8,37 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const prisma = await getPrisma();
-  const bestSellers = await prisma.product.findMany({
-    where: { isPublished: true },
-    take: 8,
-    include: { images: { take: 1 }, reviews: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [bestSellers, settings] = await Promise.all([
+    prisma.product.findMany({
+      where: { isPublished: true },
+      take: 8,
+      include: { images: { take: 1 }, reviews: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.storeSettings.findUnique({ where: { id: "singleton" } }).catch(() => null),
+  ]);
+
+  const heroImage = settings?.heroImageUrl;
+  const heroTitle = settings?.heroTitle || "Everything They Love.";
+  const heroSubtitle = settings?.heroSubtitle || "Thoughtfully chosen products for happier, healthier pets.";
+  const heroCtaText = settings?.heroCtaText || "Shop Dogs";
+  const heroCtaLink = settings?.heroCtaLink || "/dogs";
 
   return (
     <main className="bg-cream">
       {/* HERO */}
       <section className="relative flex min-h-[80vh] items-center justify-center overflow-hidden bg-sage-50 px-4 text-center">
-        <div className="relative z-10 max-w-2xl animate-fade-up">
-          <h1 className="font-display text-5xl text-charcoal md:text-6xl">Everything They Love.</h1>
-          <p className="mt-4 text-lg text-charcoal-light">
-            Thoughtfully chosen products for happier, healthier pets.
+        {heroImage && (
+          <Image src={heroImage} alt="" fill priority className="object-cover" />
+        )}
+        {heroImage && <div className="absolute inset-0 bg-black/35" />}
+        <div className={`relative z-10 max-w-2xl animate-fade-up ${heroImage ? "text-white" : ""}`}>
+          <h1 className={`font-display text-5xl md:text-6xl ${heroImage ? "text-white" : "text-charcoal"}`}>{heroTitle}</h1>
+          <p className={`mt-4 text-lg ${heroImage ? "text-white/90" : "text-charcoal-light"}`}>
+            {heroSubtitle}
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Link href="/dogs"><Button variant="primary">Shop Dogs</Button></Link>
+            <Link href={heroCtaLink}><Button variant="primary">{heroCtaText}</Button></Link>
             <Link href="/cats"><Button variant="secondary">Shop Cats</Button></Link>
           </div>
         </div>

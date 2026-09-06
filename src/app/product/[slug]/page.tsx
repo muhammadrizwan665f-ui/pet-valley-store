@@ -1,11 +1,10 @@
 import { getPrisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { AddToCartPanel } from "@/components/product/AddToCartPanel";
+import { ProductGallery } from "@/components/product/ProductGallery";
 import { RecentlyViewed } from "@/components/product/RecentlyViewed";
 import { TrackViewed } from "@/components/product/TrackViewed";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { decodeStringArray } from "@/lib/json";
-import Image from "next/image";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -62,50 +61,21 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       />
 
       <div className="grid gap-10 md:grid-cols-2">
-        <div className="space-y-3">
-          <div className="relative aspect-square overflow-hidden rounded-2xl bg-sage-50">
-            <Image src={product.images[0]?.url || "/images/placeholder-product.jpg"} alt={product.name} fill className="object-cover" />
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {product.images.slice(1, 5).map((img: any) => (
-              <div key={img.id} className="relative aspect-square overflow-hidden rounded-lg bg-sage-50">
-                <Image src={img.url} alt="" fill className="object-cover" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h1 className="font-display text-3xl text-charcoal">{product.name}</h1>
-          <p className="mt-1 text-sm text-charcoal-light">★ {avgRating.toFixed(1)} ({product.reviews.length} reviews)</p>
-
-          <div className="mt-4 flex items-baseline gap-3">
-            <span className="text-2xl font-semibold">${Number(product.price).toFixed(2)}</span>
-            {product.compareAtPrice && <span className="text-charcoal-light line-through">${Number(product.compareAtPrice).toFixed(2)}</span>}
-          </div>
-
-          <p className="mt-2 text-sm text-charcoal-light">{product.stock > 0 ? "In stock" : "Out of stock"}</p>
-
-          <AddToCartPanel
-            productId={product.id}
-            variants={product.variants.map((v: any) => ({ id: v.id, name: v.name, value: v.value }))}
-            inStock={product.stock > 0}
-          />
-
-          <p className="mt-6 text-sm leading-relaxed text-charcoal-light">{product.description}</p>
-
-          {decodeStringArray(product.features).length > 0 && (
-            <ul className="mt-4 list-disc pl-5 text-sm text-charcoal-light">
-              {decodeStringArray(product.features).map((f: any, i: any) => <li key={i}>{f}</li>)}
-            </ul>
-          )}
-
-          <div className="mt-6 space-y-1 text-xs text-charcoal-light">
-            <p>✓ Free shipping on qualifying orders</p>
-            <p>✓ 30-day easy returns</p>
-            <p>✓ Secure PayFast checkout</p>
-          </div>
-        </div>
+        <ProductGallery
+          productId={product.id}
+          images={product.images.map((i: any) => i.url)}
+          variants={product.variants.map((v: any) => ({
+            id: v.id, name: v.name, value: v.value, imageUrl: v.imageUrl, priceDelta: Number(v.priceDelta), stock: v.stock,
+          }))}
+          basePrice={Number(product.price)}
+          compareAtPrice={product.compareAtPrice ? Number(product.compareAtPrice) : null}
+          inStock={product.stock > 0}
+          productName={product.name}
+          avgRating={avgRating}
+          reviewCount={product.reviews.length}
+          description={product.description}
+          features={decodeStringArray(product.features)}
+        />
       </div>
 
       {/* REVIEWS */}
