@@ -1,5 +1,7 @@
 import { getPrisma } from "@/lib/prisma";
 import Link from "next/link";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
+import { TogglePublishButton } from "@/components/admin/TogglePublishButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +52,11 @@ export default async function AdminProductsPage({ searchParams: searchParamsProm
               <td className="p-3">{p.isPublished ? "Published" : "Draft"}</td>
               <td className="p-3">{p.createdAt.toLocaleDateString()}</td>
               <td className="p-3">
-                <Link href={`/admin/products/${p.id}`} className="text-sage-600">Edit</Link>
+                <div className="flex items-center gap-3">
+                  <Link href={`/admin/products/${p.id}`} className="text-sage-600">Edit</Link>
+                  <TogglePublishButton id={p.id} isPublished={p.isPublished} />
+                  <DeleteProductButton id={p.id} name={p.name} />
+                </div>
               </td>
             </tr>
           ))}

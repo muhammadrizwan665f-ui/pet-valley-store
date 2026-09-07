@@ -159,6 +159,21 @@ export async function DELETE(req: NextRequest) {
   const prisma = await getPrisma();
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id } = await req.json();
-  await prisma.product.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+
+  try {
+    await prisma.product.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    // Products that already appear in real orders/carts/reviews can't be
+    // hard-deleted (would corrupt order history) — SQLite enforces this via
+    // the foreign key. Give a clear, actionable message instead of a 500.
+    const message = String(err?.message || "");
+    if (err?.code === "P2003" || /FOREIGN KEY constraint failed/i.test(message)) {
+      return NextResponse.json(
+        { error: "This product has existing orders, cart items, or reviews and can't be deleted. Unpublish it instead to hide it from the store." },
+        { status: 409 },
+      );
+    }
+    return errorResponse(err);
+  }
 }
