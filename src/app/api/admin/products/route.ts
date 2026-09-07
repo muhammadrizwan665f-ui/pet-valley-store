@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getPrisma } from "@/lib/prisma";
 import { encodeStringArray, decodeStringArray } from "@/lib/json";
+import { slugify } from "@/lib/slugify";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
   const product = await prisma.product.create({
     data: {
       name: body.name,
-      slug: body.slug,
+      slug: slugify(body.slug || body.name),
       categoryId: body.categoryId,
       petType: body.petType,
       description: body.description,
@@ -64,6 +65,7 @@ export async function PATCH(req: NextRequest) {
   const prisma = await getPrisma();
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id, images, variants, ...rest } = await req.json();
+  if (rest.slug) rest.slug = slugify(rest.slug);
 
   // Plain scalar fields update normally...
   const product = await prisma.product.update({ where: { id }, data: rest });
