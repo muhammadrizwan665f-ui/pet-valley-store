@@ -20,6 +20,7 @@ export default function ProductFormPage() {
   const [variants, setVariants] = useState<VariantRow[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/categories").then((r) => r.json()).then(setCategories);
@@ -41,6 +42,7 @@ export default function ProductFormPage() {
 
   const save = async () => {
     setSaving(true);
+    setError(null);
     const payload = {
       ...form,
       price: parseFloat(form.price) || 0,
@@ -58,7 +60,12 @@ export default function ProductFormPage() {
       ? await fetch("/api/admin/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
       : await fetch("/api/admin/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: params.id, ...payload }) });
     setSaving(false);
-    if (res.ok) router.push("/admin/products");
+    if (res.ok) {
+      router.push("/admin/products");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Could not save the product. Please try again.");
+    }
   };
 
   const inputCls = "w-full rounded-lg border border-[#e4e6e8] px-3 py-2 text-sm";
@@ -211,6 +218,7 @@ export default function ProductFormPage() {
       <button onClick={save} disabled={saving} className="rounded-lg bg-sage-500 px-4 py-2 text-sm text-white">
         {saving ? "Saving…" : "Save Product"}
       </button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }
