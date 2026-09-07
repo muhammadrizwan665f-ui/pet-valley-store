@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { MediaUploader } from "@/components/admin/MediaUploader";
 
 type ImageRow = { id?: string; url: string; type: "image" | "video"; altText?: string };
-type VariantRow = { id?: string; name: string; value: string; images: string[]; priceDelta?: number; sku?: string; stock?: number };
+type VariantRow = { id?: string; name: string; value: string; images: string[]; priceDelta?: number };
 
 export default function ProductFormPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function ProductFormPage() {
         setImages((p.images || []).map((i: any) => ({ id: i.id, url: i.url, type: i.type || "image", altText: i.altText || "" })));
         setVariants((p.variants || []).map((v: any) => ({
           id: v.id, name: v.name, value: v.value, images: v.images?.length ? v.images : (v.imageUrl ? [v.imageUrl] : []),
-          priceDelta: v.priceDelta, sku: v.sku || "", stock: v.stock,
+          priceDelta: v.priceDelta,
         })));
       });
     }
@@ -43,14 +43,15 @@ export default function ProductFormPage() {
     setSaving(true);
     const payload = {
       ...form,
-      price: parseFloat(form.price),
+      price: parseFloat(form.price) || 0,
       compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : null,
-      stock: parseInt(form.stock, 10),
+      stock: parseInt(form.stock, 10) || 0,
       images: images.filter((i) => i.url.trim()),
       variants: variants.filter((v) => v.value.trim()).map((v) => ({
         ...v,
         priceDelta: Number(v.priceDelta) || 0,
-        stock: Number(v.stock) || 0,
+        sku: null,      // no per-variant SKU tracking — kept simple by request
+        stock: 999999,  // stock is always unlimited — this field isn't shown to the admin anymore
       })),
     };
     const res = isNew
@@ -134,14 +135,14 @@ export default function ProductFormPage() {
           <h2 className="text-sm font-semibold">Colours / Options</h2>
           <button
             type="button"
-            onClick={() => setVariants([...variants, { name: "Color", value: "", images: [], priceDelta: 0, sku: "", stock: 0 }])}
+            onClick={() => setVariants([...variants, { name: "Color", value: "", images: [], priceDelta: 0 }])}
             className="rounded-lg bg-sage-100 px-3 py-1.5 text-xs font-medium text-sage-700"
           >
             + Add Colour
           </button>
         </div>
         <p className="mb-3 text-xs text-[#6b7280]">
-          Each colour can have its own uploaded photo, price adjustment, SKU and stock count. Customers pick one on the product page.
+          Each colour can have its own uploaded photo and an optional price adjustment. Stock is unlimited for every colour. Customers pick one on the product page.
         </p>
         <div className="space-y-3">
           {variants.map((v, i) => (
@@ -192,26 +193,13 @@ export default function ProductFormPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div>
                 <input
-                  placeholder="Price adjustment (+/-)"
+                  placeholder="Price adjustment (optional, +/-)"
                   type="number"
-                  value={v.priceDelta}
-                  onChange={(e) => setVariants(variants.map((x, j) => (j === i ? { ...x, priceDelta: Number(e.target.value) } : x)))}
-                  className={`w-1/3 ${inputCls}`}
-                />
-                <input
-                  placeholder="SKU"
-                  value={v.sku}
-                  onChange={(e) => setVariants(variants.map((x, j) => (j === i ? { ...x, sku: e.target.value } : x)))}
-                  className={`w-1/3 ${inputCls}`}
-                />
-                <input
-                  placeholder="Stock"
-                  type="number"
-                  value={v.stock}
-                  onChange={(e) => setVariants(variants.map((x, j) => (j === i ? { ...x, stock: Number(e.target.value) } : x)))}
-                  className={`w-1/3 ${inputCls}`}
+                  value={v.priceDelta ?? ""}
+                  onChange={(e) => setVariants(variants.map((x, j) => (j === i ? { ...x, priceDelta: e.target.value === "" ? undefined : Number(e.target.value) } : x)))}
+                  className={`w-1/2 ${inputCls}`}
                 />
               </div>
             </div>
