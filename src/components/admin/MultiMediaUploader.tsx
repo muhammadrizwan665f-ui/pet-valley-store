@@ -48,18 +48,17 @@ export function MultiMediaUploader({
     setError(null);
     setProgress({ done: 0, total: files.length });
 
-    // Upload in parallel but keep results in selection order.
-    let done = 0;
-    const results = await Promise.all(
-      files.map(async (file) => {
-        const r = await uploadOne(file);
-        done += 1;
-        setProgress({ done, total: files.length });
-        return r;
-      }),
-    );
+    // Uploaded ONE AT A TIME, not in parallel: multiple large files (e.g.
+    // several videos) uploading concurrently in the same Cloudflare Worker
+    // isolate was exceeding its 128MB memory limit and crashing the whole
+    // site (Cloudflare Error 1102). Sequential is slower but safe.
+    const successful: UploadedMedia[] = [];
+    for (const file of files) {
+      const r = await uploadOne(file);
+      if (r) successful.push(r);
+      setProgress((p) => ({ done: (p?.done ?? 0) + 1, total: files.length }));
+    }
 
-    const successful = results.filter((r): r is UploadedMedia => r !== null);
     if (successful.length) onUpload(successful);
 
     setUploading(false);

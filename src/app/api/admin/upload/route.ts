@@ -6,7 +6,9 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 export const dynamic = "force-dynamic";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024; // 20MB — kept conservative: Cloudflare Workers have a
+// 128MB memory ceiling per isolate, shared across whatever else is running
+// concurrently in it, so large videos leave little headroom.
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
@@ -46,7 +48,13 @@ export async function POST(req: NextRequest) {
   const ext = file.name.split(".").pop()?.toLowerCase() || (isVideo ? "mp4" : "jpg");
   const key = `${isVideo ? "videos" : "images"}/${crypto.randomUUID()}.${ext}`;
 
-  await env.MEDIA.put(key, await file.arrayBuffer(), {
+  // Stream straight from the incoming File into R2 instead of buffering the
+  // whole thing into memory first (`await file.arrayBuffer()`) — that extra
+  // full-size copy is exactly what was pushing large video uploads over
+  // the Worker's memory limit ("Worker exceeded resource limits" / Cloudflare
+  // Error 1102), especially when several uploads land in the same isolate
+  // at once.
+  await env.MEDIA.put(key, file.stream(), {
     httpMetadata: { contentType: file.type },
   });
 
