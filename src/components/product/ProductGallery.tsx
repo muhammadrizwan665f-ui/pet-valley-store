@@ -1,14 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/lib/cartStore";
 import { useToast } from "@/components/ui/Toast";
 
 type MediaItem = { url: string; type: "image" | "video" };
 type Variant = { id: string; name: string; value: string; imageUrl?: string | null; images?: string[]; priceDelta?: number; stock?: number };
+
+function dedupe(items: MediaItem[]): MediaItem[] {
+  const seen = new Set<string>();
+  return items.filter((i) => {
+    if (seen.has(i.url)) return false;
+    seen.add(i.url);
+    return true;
+  });
+}
 
 export function ProductGallery({
   productId,
@@ -39,26 +49,48 @@ export function ProductGallery({
   const [variantId, setVariantId] = useState<string | undefined>(variants[0]?.id);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(0);
   const openCart = useCartStore((s) => s.openCart);
   const { show } = useToast();
 
   const selectedVariant = variants.find((v) => v.id === variantId);
-  const variantImages: MediaItem[] = (selectedVariant?.images?.length ? selectedVariant.images : selectedVariant?.imageUrl ? [selectedVariant.imageUrl] : []).map(
-    (url) => ({ url, type: "image" as const }),
-  );
-  const variantMedia: MediaItem | null = variantImages[0] || null;
-  const [manualActive, setManualActive] = useState<MediaItem | null>(null);
-  const activeMedia: MediaItem =
-    manualActive || variantMedia || images[0] || { url: "/images/placeholder-product.jpg", type: "image" };
+  const variantImages: MediaItem[] = (
+    selectedVariant?.images?.length ? selectedVariant.images : selectedVariant?.imageUrl ? [selectedVariant.imageUrl] : []
+  ).map((url) => ({ url, type: "image" as const }));
+
+  // The selected colour's own photos lead the gallery, but the product's
+  // general photos/videos are always included too (and always shown when
+  // no colour-specific photos exist) — previously the colour's images
+  // fully replaced the general ones, so the general photos never appeared
+  // at all once any colour with a photo existed.
+  const gallery = useMemo(() => {
+    const combined = dedupe([...variantImages, ...images]);
+    return combined.length ? combined : [{ url: "/images/placeholder-product.jpg", type: "image" as const }];
+  }, [variantImages, images]);
+
+  useEffect(() => {
+    setIndex(0);
+    setDirection(0);
+  }, [variantId]);
+
+  useEffect(() => {
+    if (index >= gallery.length) setIndex(0);
+  }, [gallery.length, index]);
+
+  const active = gallery[index] ?? gallery[0];
   const price = basePrice + Number(selectedVariant?.priceDelta || 0);
   const outOfStockForVariant = selectedVariant ? (selectedVariant.stock ?? 1) <= 0 : !inStock;
 
-  const gallery = useMemo(() => {
-    // When a colour with its own photos is selected, show ALL of that
-    // colour's images first, then fall back to the product's general set.
-    const base = variantImages.length ? variantImages : images;
-    return [activeMedia, ...base.filter((i) => i.url !== activeMedia.url)];
-  }, [activeMedia, images, variantImages]);
+  const goTo = (next: number) => {
+    setDirection(next > index ? 1 : -1);
+    setIndex((next + gallery.length) % gallery.length);
+  };
+
+  const onDragEnd = (_: any, info: PanInfo) => {
+    if (info.offset.x < -60) goTo(index + 1);
+    else if (info.offset.x > 60) goTo(index - 1);
+  };
 
   const addToCart = async () => {
     const res = await fetch("/api/cart", {
@@ -79,37 +111,78 @@ export function ProductGallery({
   return (
     <>
       <div className="space-y-3">
-        <div className="relative aspect-square overflow-hidden rounded-2xl bg-sage-50">
-          <AnimatePresence mode="wait">
+        <div className="group relative aspect-square touch-pan-y overflow-hidden rounded-2xl bg-sage-50">
+          <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
-              key={activeMedia.url}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              key={active.url}
+              custom={direction}
+              initial={{ x: direction >= 0 ? 60 : -60, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: direction >= 0 ? -60 : 60, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              drag={gallery.length > 1 ? "x" : false}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={onDragEnd}
               className="absolute inset-0"
             >
-              {activeMedia.type === "video" ? (
-                <video src={activeMedia.url} controls playsInline className="h-full w-full object-cover" />
+              {active.type === "video" ? (
+                <video src={active.url} controls playsInline className="h-full w-full object-cover" />
               ) : (
-                <Image src={activeMedia.url} alt={productName} fill className="object-cover" />
+                <Image src={active.url} alt={productName} fill priority className="pointer-events-none object-cover" />
               )}
             </motion.div>
           </AnimatePresence>
+
+          {gallery.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous image"
+                onClick={() => goTo(index - 1)}
+                className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-charcoal opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                type="button"
+                aria-label="Next image"
+                onClick={() => goTo(index + 1)}
+                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-charcoal opacity-0 shadow-sm transition-opacity group-hover:opacity-100"
+              >
+                <ChevronRight size={18} />
+              </button>
+
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                {gallery.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={`Go to image ${i + 1}`}
+                    onClick={() => goTo(i)}
+                    className={`h-1.5 rounded-full transition-all ${i === index ? "w-4 bg-white" : "w-1.5 bg-white/60"}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
+
         {gallery.length > 1 && (
-          <div className="grid grid-cols-4 gap-2">
-            {gallery.slice(1, 5).map((m, i) => (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {gallery.map((m, i) => (
               <button
                 key={m.url + i}
                 type="button"
-                onClick={() => setManualActive(m)}
-                className="relative aspect-square overflow-hidden rounded-lg bg-sage-50"
+                onClick={() => goTo(i)}
+                className={`relative aspect-square w-16 shrink-0 overflow-hidden rounded-lg bg-sage-50 ring-2 transition-colors ${
+                  i === index ? "ring-sage-500" : "ring-transparent"
+                }`}
               >
                 {m.type === "video" ? (
                   <>
                     <video src={m.url} className="h-full w-full object-cover" muted />
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">▶</span>
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-xs text-white">▶</span>
                   </>
                 ) : (
                   <Image src={m.url} alt="" fill className="object-cover" />
@@ -142,13 +215,10 @@ export function ProductGallery({
                   <button
                     key={v.id}
                     type="button"
-                    onClick={() => {
-                      setVariantId(v.id);
-                      setManualActive(null);
-                    }}
+                    onClick={() => setVariantId(v.id)}
                     title={v.value}
                     className={`relative h-14 w-14 overflow-hidden rounded-xl border-2 transition-colors ${
-                      variantId === v.id && !manualActive ? "border-sage-500" : "border-transparent"
+                      variantId === v.id ? "border-sage-500" : "border-transparent"
                     } ${(v.stock ?? 1) <= 0 ? "opacity-40" : ""}`}
                   >
                     <Image src={v.imageUrl!} alt={v.value} fill className="object-cover" />

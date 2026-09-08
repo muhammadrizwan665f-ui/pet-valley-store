@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { MediaUploader } from "@/components/admin/MediaUploader";
+import { MultiMediaUploader } from "@/components/admin/MultiMediaUploader";
 
 type ImageRow = { id?: string; url: string; type: "image" | "video"; altText?: string };
 type VariantRow = { id?: string; name: string; value: string; images: string[]; priceDelta?: number };
@@ -105,35 +105,39 @@ export default function ProductFormPage() {
       <div className="rounded-2xl border border-[#e4e6e8] p-4">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Product Photos & Videos</h2>
-          <button
-            type="button"
-            onClick={() => setImages([...images, { url: "", type: "image", altText: "" }])}
-            className="rounded-lg bg-sage-100 px-3 py-1.5 text-xs font-medium text-sage-700"
-          >
-            + Add Slot
-          </button>
         </div>
-        <p className="mb-3 text-xs text-[#6b7280]">Upload photos or a short product video straight from your device.</p>
-        <div className="flex flex-wrap gap-4">
-          {images.map((img, i) => (
-            <div key={i} className="flex flex-col items-center gap-1.5">
-              <MediaUploader
-                value={img.url ? { url: img.url, type: img.type } : undefined}
-                onChange={(media) => setImages(images.map((x, j) => (j === i ? { ...x, url: media.url, type: media.type } : x)))}
-              />
-              <input
-                placeholder="Alt text"
-                value={img.altText}
-                onChange={(e) => setImages(images.map((x, j) => (j === i ? { ...x, altText: e.target.value } : x)))}
-                className="w-28 rounded-lg border border-[#e4e6e8] px-2 py-1 text-[11px]"
-              />
-              <button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="text-[10px] font-medium text-red-500">
-                Remove
-              </button>
-            </div>
-          ))}
-          {images.length === 0 && <p className="text-xs text-[#9ca3af]">No photos/videos yet.</p>}
-        </div>
+        <p className="mb-3 text-xs text-[#6b7280]">
+          Select as many photos/videos as you like at once — they'll all upload together.
+        </p>
+        <MultiMediaUploader
+          onUpload={(uploaded) =>
+            setImages([...images, ...uploaded.map((m) => ({ url: m.url, type: m.type, altText: "" }))])
+          }
+        />
+        {images.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-4">
+            {images.map((img, i) => (
+              <div key={i} className="flex w-28 flex-col items-center gap-1.5">
+                <div className="h-28 w-28 overflow-hidden rounded-xl border border-[#e4e6e8] bg-[#f7f8f9]">
+                  {img.type === "video" ? (
+                    <video src={img.url} className="h-full w-full object-cover" muted />
+                  ) : (
+                    <img src={img.url} alt="" className="h-full w-full object-cover" />
+                  )}
+                </div>
+                <input
+                  placeholder="Alt text"
+                  value={img.altText}
+                  onChange={(e) => setImages(images.map((x, j) => (j === i ? { ...x, altText: e.target.value } : x)))}
+                  className="w-28 rounded-lg border border-[#e4e6e8] px-2 py-1 text-[11px]"
+                />
+                <button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))} className="text-[10px] font-medium text-red-500">
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Colour / variant options */}
@@ -178,26 +182,31 @@ export default function ProductFormPage() {
 
               <div>
                 <p className="mb-1.5 text-xs font-medium text-[#6b7280]">Photos for this colour</p>
-                <div className="flex flex-wrap gap-2">
-                  {v.images.map((url, k) => (
-                    <div key={k} className="relative h-14 w-14">
-                      <img src={url} alt="" className="h-14 w-14 rounded-lg object-cover" />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setVariants(variants.map((x, j) => (j === i ? { ...x, images: x.images.filter((_, m) => m !== k) } : x)))
-                        }
-                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <MediaUploader
-                    accept="image/*"
-                    onChange={(media) => setVariants(variants.map((x, j) => (j === i ? { ...x, images: [...x.images, media.url] } : x)))}
-                  />
-                </div>
+                {v.images.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {v.images.map((url, k) => (
+                      <div key={k} className="relative h-14 w-14">
+                        <img src={url} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVariants(variants.map((x, j) => (j === i ? { ...x, images: x.images.filter((_, m) => m !== k) } : x)))
+                          }
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <MultiMediaUploader
+                  accept="image/*"
+                  label="Click or drop photos for this colour — select multiple at once"
+                  onUpload={(uploaded) =>
+                    setVariants(variants.map((x, j) => (j === i ? { ...x, images: [...x.images, ...uploaded.map((m) => m.url)] } : x)))
+                  }
+                />
               </div>
 
               <div>
