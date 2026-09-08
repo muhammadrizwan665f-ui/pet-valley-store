@@ -18,7 +18,7 @@ function autoSku(): string {
 // of a bare 500, and lets any other unexpected error still surface (rather
 // than fail completely silently) with at least a generic message.
 function errorResponse(err: any) {
-  const message = String(err?.message || "");
+  const message = String(err?.message || err || "");
   console.error("Product save error:", err);
   if (err?.code === "P2002" || /UNIQUE constraint failed/i.test(message)) {
     const field = message.match(/\.(\w+)$/)?.[1] || "a field";
@@ -32,18 +32,25 @@ function errorResponse(err: any) {
 
 export const dynamic = "force-dynamic";
 
-async function requireAdmin() {
+async function requireAdmin(): Promise<boolean> {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;
   return role === "ADMIN" || role === "STAFF";
 }
 
-export async function POST(req: NextRequest) {
-  const prisma = await getPrisma();
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+// EVERYTHING below runs inside a try/catch per handler — including
+// getPrisma() and requireAdmin() themselves. Previously those two calls sat
+// OUTSIDE the try block, so if either of them threw (D1 binding briefly
+// unavailable, a session-lookup hiccup, etc.) the exception was completely
+// uncaught, which Cloudflare intercepts and replaces with its own generic
+// "Error 1101: Worker threw exception" page instead of any JSON at all.
 
+export async function POST(req: NextRequest) {
   try {
+    if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const prisma = await getPrisma();
     const body = await req.json();
+
     const product = await prisma.product.create({
       data: {
         name: body.name,
@@ -91,10 +98,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const prisma = await getPrisma();
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
   try {
+    if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const prisma = await getPrisma();
     const { id, images, variants, ...rest } = await req.json();
     if (rest.slug) rest.slug = slugify(rest.slug);
     if ("sku" in rest) rest.sku = (rest.sku || "").trim() || autoSku();
@@ -161,10 +167,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const prisma = await getPrisma();
-  if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
   try {
+    if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const prisma = await getPrisma();
     const { id } = await req.json();
     await prisma.product.delete({ where: { id } });
     return NextResponse.json({ ok: true });
