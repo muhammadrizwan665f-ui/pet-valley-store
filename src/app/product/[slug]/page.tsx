@@ -32,7 +32,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   const related = await prisma.product.findMany({
     where: { categoryId: product.categoryId, id: { not: product.id }, isPublished: true },
-    include: { images: { take: 1 }, reviews: true },
+    include: { images: { where: { type: "image" }, take: 1 }, reviews: true },
     take: 4,
   });
 
@@ -56,7 +56,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         product={{
           id: product.id, name: product.name, slug: product.slug, price: Number(product.price),
           compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : null,
-          imageUrl: product.images[0]?.url || "/images/placeholder-product.jpg",
+          imageUrl: product.images.find((i: any) => (i.type || "image") === "image")?.url || "/images/placeholder-product.jpg",
         }}
       />
 

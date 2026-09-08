@@ -11,7 +11,7 @@ export async function GET() {
   if (!session?.user) return NextResponse.json([]);
   const items = await prisma.wishlistItem.findMany({
     where: { userId: (session.user as any).id },
-    include: { product: { include: { images: { take: 1 }, reviews: true } } },
+    include: { product: { include: { images: { where: { type: "image" }, take: 1 }, reviews: true } } },
   });
   return NextResponse.json(items);
 }

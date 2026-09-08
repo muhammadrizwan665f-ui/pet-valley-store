@@ -5,7 +5,7 @@ export async function PetCategoryPage({ petType, title }: { petType: "dog" | "ca
   const prisma = await getPrisma();
   const products = await prisma.product.findMany({
     where: { isPublished: true, petType: { in: [petType, "both"] } },
-    include: { images: { take: 1 }, reviews: true },
+    include: { images: { where: { type: "image" }, take: 1 }, reviews: true },
     orderBy: { createdAt: "desc" },
   });
 

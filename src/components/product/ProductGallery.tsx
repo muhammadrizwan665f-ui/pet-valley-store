@@ -64,9 +64,15 @@ export function ProductGallery({
   // no colour-specific photos exist) — previously the colour's images
   // fully replaced the general ones, so the general photos never appeared
   // at all once any colour with a photo existed.
+  //
+  // Within that combined set, any video always comes first — clicking into
+  // a product should show its video before its photos, if it has one.
   const gallery = useMemo(() => {
     const combined = dedupe([...variantImages, ...images]);
-    return combined.length ? combined : [{ url: "/images/placeholder-product.jpg", type: "image" as const }];
+    const videos = combined.filter((m) => m.type === "video");
+    const photos = combined.filter((m) => m.type !== "video");
+    const ordered = [...videos, ...photos];
+    return ordered.length ? ordered : [{ url: "/images/placeholder-product.jpg", type: "image" as const }];
   }, [variantImages, images]);
 
   useEffect(() => {

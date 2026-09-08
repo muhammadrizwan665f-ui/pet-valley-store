@@ -32,42 +32,53 @@ const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime
  * without ever holding the full file in memory.
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  if (role !== "ADMIN" && role !== "STAFF") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    const session = await getServerSession(authOptions);
+    const role = (session?.user as any)?.role;
+    if (role !== "ADMIN" && role !== "STAFF") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { env } = await getCloudflareContext({ async: true });
+    if (!env?.MEDIA) {
+      return NextResponse.json({ error: "Media storage is not configured on this deployment." }, { status: 500 });
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+    const filename = req.nextUrl.searchParams.get("filename") || "upload";
+    if (!req.body) return NextResponse.json({ error: "No file provided" }, { status: 400 });
+
+    const isVideo = ALLOWED_VIDEO_TYPES.has(contentType);
+    const isImage = ALLOWED_IMAGE_TYPES.has(contentType);
+    if (!isVideo && !isImage) {
+      return NextResponse.json({ error: "Unsupported file type. Use JPG, PNG, WEBP, GIF images or MP4/WEBM/MOV videos." }, { status: 400 });
+    }
+
+    const contentLength = Number(req.headers.get("content-length") || 0);
+    const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (contentLength && contentLength > maxBytes) {
+      return NextResponse.json({ error: `File too large. Max ${Math.round(maxBytes / (1024 * 1024))}MB.` }, { status: 400 });
+    }
+
+    const ext = filename.split(".").pop()?.toLowerCase() || (isVideo ? "mp4" : "jpg");
+    const key = `${isVideo ? "videos" : "images"}/${crypto.randomUUID()}.${ext}`;
+
+    await env.MEDIA.put(key, req.body, {
+      httpMetadata: { contentType },
+    });
+
+    return NextResponse.json({
+      url: `/api/media/${key}`,
+      type: isVideo ? "video" : "image",
+    });
+  } catch (err: any) {
+    // Whatever goes wrong (R2 write failure, a dropped connection on a
+    // large upload, etc.) this ALWAYS returns valid JSON with a real error
+    // status — previously an uncaught exception here could produce an
+    // empty or truncated response body, which broke the client's
+    // res.json() call with a cryptic "Unexpected end of JSON input"
+    // instead of showing the actual problem.
+    console.error("Upload failed:", err);
+    return NextResponse.json({ error: err?.message || "Upload failed. Please try again." }, { status: 500 });
   }
-
-  const { env } = await getCloudflareContext({ async: true });
-  if (!env?.MEDIA) {
-    return NextResponse.json({ error: "Media storage is not configured on this deployment." }, { status: 500 });
-  }
-
-  const contentType = req.headers.get("content-type") || "";
-  const filename = req.nextUrl.searchParams.get("filename") || "upload";
-  if (!req.body) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-
-  const isVideo = ALLOWED_VIDEO_TYPES.has(contentType);
-  const isImage = ALLOWED_IMAGE_TYPES.has(contentType);
-  if (!isVideo && !isImage) {
-    return NextResponse.json({ error: "Unsupported file type. Use JPG, PNG, WEBP, GIF images or MP4/WEBM/MOV videos." }, { status: 400 });
-  }
-
-  const contentLength = Number(req.headers.get("content-length") || 0);
-  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
-  if (contentLength && contentLength > maxBytes) {
-    return NextResponse.json({ error: `File too large. Max ${Math.round(maxBytes / (1024 * 1024))}MB.` }, { status: 400 });
-  }
-
-  const ext = filename.split(".").pop()?.toLowerCase() || (isVideo ? "mp4" : "jpg");
-  const key = `${isVideo ? "videos" : "images"}/${crypto.randomUUID()}.${ext}`;
-
-  await env.MEDIA.put(key, req.body, {
-    httpMetadata: { contentType },
-  });
-
-  return NextResponse.json({
-    url: `/api/media/${key}`,
-    type: isVideo ? "video" : "image",
-  });
 }

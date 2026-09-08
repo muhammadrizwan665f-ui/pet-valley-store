@@ -30,7 +30,13 @@ export function MediaUploader({
         headers: { "Content-Type": file.type },
         body: file,
       });
-      const data = await res.json();
+      const raw = await res.text();
+      let data: any;
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error("Upload failed (server didn't return a valid response, try again).");
+      }
       if (!res.ok) throw new Error(data.error || "Upload failed");
       onChange({ url: data.url, type: data.type });
     } catch (e: any) {

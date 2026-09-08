@@ -12,7 +12,7 @@ export default async function HomePage() {
     prisma.product.findMany({
       where: { isPublished: true },
       take: 8,
-      include: { images: { take: 1 }, reviews: true },
+      include: { images: { where: { type: "image" }, take: 1 }, reviews: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.storeSettings.findUnique({ where: { id: "singleton" } }).catch(() => null),

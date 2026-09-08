@@ -39,7 +39,16 @@ export function MultiMediaUploader({
         headers: { "Content-Type": file.type },
         body: file,
       });
-      const data = await res.json();
+      const raw = await res.text();
+      let data: any;
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        // Response wasn't JSON at all (e.g. the connection dropped mid-upload
+        // for a very large file, or an infrastructure-level error page) —
+        // surface something readable instead of a cryptic parse error.
+        throw new Error(`Upload failed for ${file.name} (server didn't return a valid response, try a smaller file or retry).`);
+      }
       if (!res.ok) throw new Error(data.error || `Failed: ${file.name}`);
       return { url: data.url, type: data.type };
     } catch (e: any) {

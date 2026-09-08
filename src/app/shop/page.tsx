@@ -60,7 +60,7 @@ export default async function ShopPage({ searchParams: searchParamsPromise }: { 
   const [products, total, categories] = await Promise.all([
     prisma.product.findMany({
       where,
-      include: { images: { take: 1 }, reviews: true },
+      include: { images: { where: { type: "image" }, take: 1 }, reviews: true },
       orderBy: buildOrderBy(searchParams.sort),
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,

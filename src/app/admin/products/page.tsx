@@ -10,7 +10,7 @@ export default async function AdminProductsPage({ searchParams: searchParamsProm
   const prisma = await getPrisma();
   const products = await prisma.product.findMany({
     where: searchParams.q ? { name: { contains: searchParams.q } } : {},
-    include: { category: true, images: { take: 1 } },
+    include: { category: true, images: { where: { type: "image" }, take: 1 } },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
