@@ -127,7 +127,7 @@ export function ProductGallery({
               className="absolute inset-0"
             >
               {active.type === "video" ? (
-                <video src={active.url} controls playsInline className="h-full w-full object-cover" />
+                <video src={active.url} controls playsInline preload="metadata" className="h-full w-full object-cover" />
               ) : (
                 <Image src={active.url} alt={productName} fill priority className="pointer-events-none object-cover" />
               )}
@@ -181,7 +181,7 @@ export function ProductGallery({
               >
                 {m.type === "video" ? (
                   <>
-                    <video src={m.url} className="h-full w-full object-cover" muted />
+                    <video src={m.url} className="h-full w-full object-cover" muted preload="none" />
                     <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-xs text-white">▶</span>
                   </>
                 ) : (
