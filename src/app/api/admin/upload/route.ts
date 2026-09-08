@@ -59,11 +59,30 @@ export async function POST(req: NextRequest) {
     if (contentLength && contentLength > maxBytes) {
       return NextResponse.json({ error: `File too large. Max ${Math.round(maxBytes / (1024 * 1024))}MB.` }, { status: 400 });
     }
+    if (!contentLength) {
+      // R2's put() requires a stream with a KNOWN length up front (this is
+      // what FixedLengthStream below provides) — without a Content-Length
+      // header we have no way to declare that, so we can't safely stream
+      // this upload at all.
+      return NextResponse.json({ error: "Missing Content-Length header; cannot upload." }, { status: 400 });
+    }
 
     const ext = filename.split(".").pop()?.toLowerCase() || (isVideo ? "mp4" : "jpg");
     const key = `${isVideo ? "videos" : "images"}/${crypto.randomUUID()}.${ext}`;
 
-    await env.MEDIA.put(key, req.body, {
+    // R2's put() rejects a plain ReadableStream with "must have a known
+    // length" — it needs to know the total byte count up front (to set
+    // Content-Length on the object) before it will accept a stream instead
+    // of a fully-buffered body. FixedLengthStream is the Workers-runtime
+    // primitive for exactly this: it declares the length while still
+    // passing bytes through as a real stream, so nothing is buffered.
+    // Accessed via globalThis (typed as any) since it's a Workers-runtime
+    // global not guaranteed to be in every TS lib config.
+    const FixedLengthStreamCtor = (globalThis as any).FixedLengthStream;
+    const { readable, writable } = new FixedLengthStreamCtor(contentLength);
+    req.body.pipeTo(writable).catch(() => {}); // not awaited — runs alongside the put() below; errors surface via env.MEDIA.put() failing instead
+
+    await env.MEDIA.put(key, readable, {
       httpMetadata: { contentType },
     });
 
