@@ -29,9 +29,16 @@ export function MultiMediaUploader({
 
   const uploadOne = async (file: File): Promise<UploadedMedia | null> => {
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: form });
+      // Sent as a raw binary body (NOT FormData) — see the route's comment
+      // for why: FormData parsing forces the whole request to be buffered
+      // in memory before any data is usable, which is what was actually
+      // exceeding the Worker's memory limit on video uploads, even after
+      // the R2 write itself was switched to streaming.
+      const res = await fetch(`/api/admin/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Failed: ${file.name}`);
       return { url: data.url, type: data.type };

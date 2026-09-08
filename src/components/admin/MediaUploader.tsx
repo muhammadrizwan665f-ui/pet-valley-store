@@ -21,9 +21,15 @@ export function MediaUploader({
     setUploading(true);
     setError(null);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/admin/upload", { method: "POST", body: form });
+      // Raw binary body, not FormData — see /api/admin/upload's comment:
+      // formData() parsing forces the whole request to buffer in memory
+      // before any file data is usable, which was exceeding the Worker's
+      // memory limit on larger files.
+      const res = await fetch(`/api/admin/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
       onChange({ url: data.url, type: data.type });
