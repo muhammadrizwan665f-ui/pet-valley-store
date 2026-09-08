@@ -19,11 +19,15 @@ function autoSku(): string {
 // than fail completely silently) with at least a generic message.
 function errorResponse(err: any) {
   const message = String(err?.message || "");
+  console.error("Product save error:", err);
   if (err?.code === "P2002" || /UNIQUE constraint failed/i.test(message)) {
     const field = message.match(/\.(\w+)$/)?.[1] || "a field";
-    return NextResponse.json({ error: `That ${field} is already used by another product. Please use a different value.` }, { status: 409 });
+    return NextResponse.json({ error: `That ${field} is already used by another product. Please use a different value.`, detail: message }, { status: 409 });
   }
-  return NextResponse.json({ error: "Could not save the product. Please try again." }, { status: 500 });
+  // Include the raw error message too — this is an admin-only endpoint, not
+  // public, so surfacing it is safe and far more useful than a generic
+  // "something went wrong" while tracking down what's actually failing.
+  return NextResponse.json({ error: message || "Could not save the product. Please try again.", detail: message }, { status: 500 });
 }
 
 export const dynamic = "force-dynamic";
@@ -37,9 +41,9 @@ async function requireAdmin() {
 export async function POST(req: NextRequest) {
   const prisma = await getPrisma();
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const body = await req.json();
 
   try {
+    const body = await req.json();
     const product = await prisma.product.create({
       data: {
         name: body.name,
@@ -89,11 +93,12 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const prisma = await getPrisma();
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const { id, images, variants, ...rest } = await req.json();
-  if (rest.slug) rest.slug = slugify(rest.slug);
-  if ("sku" in rest) rest.sku = (rest.sku || "").trim() || autoSku();
 
   try {
+    const { id, images, variants, ...rest } = await req.json();
+    if (rest.slug) rest.slug = slugify(rest.slug);
+    if ("sku" in rest) rest.sku = (rest.sku || "").trim() || autoSku();
+
     // Plain scalar fields update normally...
     const product = await prisma.product.update({ where: { id }, data: rest });
 
@@ -158,9 +163,9 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const prisma = await getPrisma();
   if (!(await requireAdmin())) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const { id } = await req.json();
 
   try {
+    const { id } = await req.json();
     await prisma.product.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (err: any) {

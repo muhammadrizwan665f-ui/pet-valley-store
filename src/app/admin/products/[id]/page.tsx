@@ -63,8 +63,18 @@ export default function ProductFormPage() {
     if (res.ok) {
       router.push("/admin/products");
     } else {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Could not save the product. Please try again.");
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        // Server returned something that isn't JSON at all (a crashed
+        // request, a proxy error page, etc.) — show that raw text instead
+        // of silently failing, so this is never a mystery again.
+        setError(`Save failed: ${raw.slice(0, 300) || `HTTP ${res.status}`}`);
+        return;
+      }
+      setError(data.error || data.detail || `Could not save the product (HTTP ${res.status}).`);
     }
   };
 
