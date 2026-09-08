@@ -6,9 +6,14 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 export const dynamic = "force-dynamic";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
-const MAX_VIDEO_BYTES = 20 * 1024 * 1024; // 20MB — kept conservative: Cloudflare Workers have a
-// 128MB memory ceiling per isolate, shared across whatever else is running
-// concurrently in it, so large videos leave little headroom.
+const MAX_VIDEO_BYTES = 90 * 1024 * 1024; // 90MB — now that uploads are truly streamed
+// end-to-end (no formData buffering, no arrayBuffer copy), the Worker's 128MB
+// memory ceiling is no longer the binding constraint since memory usage
+// stays low regardless of file size. The real ceiling is Cloudflare's
+// account-level request body cap: 100MB on Free/Pro plans (200MB Business,
+// 500MB Enterprise) — https://developers.cloudflare.com/workers/platform/limits/
+// 90MB leaves headroom under the 100MB Free/Pro cap. If you're on Business
+// or Enterprise, this can safely go higher (e.g. 180MB / 450MB).
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
