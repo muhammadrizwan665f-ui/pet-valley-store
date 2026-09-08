@@ -80,11 +80,18 @@ export async function POST(req: NextRequest) {
     // global not guaranteed to be in every TS lib config.
     const FixedLengthStreamCtor = (globalThis as any).FixedLengthStream;
     const { readable, writable } = new FixedLengthStreamCtor(contentLength);
-    req.body.pipeTo(writable).catch(() => {}); // not awaited — runs alongside the put() below; errors surface via env.MEDIA.put() failing instead
 
-    await env.MEDIA.put(key, readable, {
-      httpMetadata: { contentType },
-    });
+    // Both promises MUST be awaited together (not fire-and-forget): the pipe
+    // feeds bytes in while put() consumes them concurrently. Leaving the
+    // pipeTo() un-awaited let the Worker's execution context potentially
+    // terminate before it finished, which is very likely what was causing
+    // sporadic "Worker threw exception" crashes — not just on uploads
+    // themselves, but on unrelated requests landing on the same isolate
+    // shortly after (including product saves).
+    await Promise.all([
+      req.body.pipeTo(writable),
+      env.MEDIA.put(key, readable, { httpMetadata: { contentType } }),
+    ]);
 
     return NextResponse.json({
       url: `/api/media/${key}`,
